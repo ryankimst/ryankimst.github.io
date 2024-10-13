@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obstacle Jump Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: red;
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+        }
+
+        .new-record {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: green;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="game-over" id="gameOver">Game Over! Your Score: <span id="finalScore"></span></div>
+    <div class="score" id="scoreDisplay">Score: 0</div>
+    <div class="new-record" id="newRecord">Congratulations! New Record!</div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverText = document.getElementById('gameOver');
+        const finalScore = document.getElementById('finalScore');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const newRecordText = document.getElementById('newRecord');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let isJumping = false;
+        let isGameOver = false;
+        let playerY = canvas.height - 150;
+        let playerHeight = 50;
+        let playerWidth = 50;
+        let velocityY = 0;
+        const gravity = 1;
+        const jumpPower = -20;
+        const ground = canvas.height - 100;
+
+        // Obstacle properties
+        let obstacles = [];
+        const obstacleWidth = 50;
+        const obstacleHeight = 70;
+        const obstacleSpeed = 5;
+        let obstacleTimer = 0;
+        const obstacleFrequency = 100;
+
+        // Score variables
+        let score = 0;
+        let highScore = 0;  // 최고 기록을 기억
+        let distanceTraveled = 0;
+        const scoreMultiplier = 0.1; // 점수 계산을 위한 거리당 점수 비율
+
+        // Color choices for obstacles
+        const colors = ['red', 'green', 'blue'];
+
+        // Player jump function
+        function jump() {
+            if (!isJumping && playerY >= ground - playerHeight) {
+                velocityY = jumpPower;
+                isJumping = true;
+            }
+        }
+
+        // Handle keypress (space to jump)
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space') {
+                if (isGameOver) {
+                    restartGame();
+                } else {
+                    jump();
+                }
+            }
+        });
+
+        // Restart the game
+        function restartGame() {
+            isGameOver = false;
+            gameOverText.style.display = 'none';
+            newRecordText.style.display = 'none';
+            score = 0;
+            distanceTraveled = 0;
+            scoreDisplay.textContent = 'Score: 0';
+            obstacles = [];
+            playerY = canvas.height - 150;
+            velocityY = 0;
+            obstacleTimer = 0;
+            animate();
+        }
+
+        // Check for collisions
+        function checkCollision(obstacle) {
+            if (50 < obstacle.x + obstacleWidth && 50 + playerWidth > obstacle.x &&
+                playerY + playerHeight >= ground - obstacleHeight && playerY <= ground) {
+                return true;
+            }
+            return false;
+        }
+
+        // Main game loop
+        function animate() {
+            if (isGameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player (black color)
+            velocityY += gravity;
+            playerY += velocityY;
+            if (playerY >= ground - playerHeight) {
+                playerY = ground - playerHeight;
+                velocityY = 0;
+                isJumping = false;
+            }
+            ctx.fillStyle = 'black';  // Player is black
+            ctx.fillRect(50, playerY, playerWidth, playerHeight);
+
+            // Obstacle generation
+            obstacleTimer++;
+            if (obstacleTimer > obstacleFrequency) {
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                obstacles.push({ x: canvas.width, color: randomColor });
+                obstacleTimer = 0;
+            }
+
+            // Update and draw obstacles
+            for (let i = 0; i < obstacles.length; i++) {
+                const obstacle = obstacles[i];
+                obstacle.x -= obstacleSpeed;
+
+                // Draw obstacle with random color
+                ctx.fillStyle = obstacle.color;
+                ctx.fillRect(obstacle.x, ground - obstacleHeight, obstacleWidth, obstacleHeight);
+
+                // Check collision
+                if (checkCollision(obstacle)) {
+                    isGameOver = true;
+                    finalScore.textContent = score;
+                    gameOverText.style.display = 'block';
+                    if (score > highScore) {
+                        highScore = score;
+                        newRecordText.style.display = 'block';
+                    }
+                }
+            }
+
+            // Remove off-screen obstacles
+            obstacles = obstacles.filter(obstacle => obstacle.x > -obstacleWidth);
+
+            // Update score based on distance traveled
+            distanceTraveled += obstacleSpeed;
+            score = Math.floor(distanceTraveled * scoreMultiplier);
+            scoreDisplay.textContent = `Score: ${score}`;
+
+            if (!isGameOver) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // Start the game
+        animate();
+    </script>
+</body>
+</html>
